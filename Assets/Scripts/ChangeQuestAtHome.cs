@@ -22,7 +22,7 @@ public class ChangeQuestAtHome : MonoBehaviour
         lista.Add("Clique nos buracos para realizar o conserto."); // Fix house
         lista.Add("Vá atrás de mais madeira."); //GOTO Second Level
         lista.Add("Clique nas janelas para consertá-las!!"); // Fix house
-        lista.Add("Por enquanto, sua base está segura!"); // END
+        lista.Add("Por enquanto, sua base está segura! (Fim de jogo)"); // END
 
 
         return lista;

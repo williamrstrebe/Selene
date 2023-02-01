@@ -8,6 +8,7 @@ public class ScenesController : MonoBehaviour
 
     public void LoadScene(string sceneName)
     {
+        Time.timeScale = 1;
         SceneManager.LoadScene(sceneName);
     }
 
@@ -19,7 +20,6 @@ public class ScenesController : MonoBehaviour
 
     public static string activeScene()
     {
-
         return SceneManager.GetActiveScene().name;
     }
 }

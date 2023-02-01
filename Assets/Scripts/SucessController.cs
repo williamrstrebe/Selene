@@ -33,6 +33,8 @@ public class SucessController : MonoBehaviour
             }
 
             successDialog.SetActive(true);
+            Time.timeScale = 0;
+
         }
     }
 

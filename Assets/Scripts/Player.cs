@@ -10,6 +10,7 @@ public class Player : MonoBehaviour
     public bool facingRight = true;
     private bool isPaused;
     private string activeScene;
+    public bool isAttacking;
     public string GetActiveScene() { return activeScene; }
     public string GetNextScene()
     {
@@ -48,9 +49,10 @@ public class Player : MonoBehaviour
 
     public List<ChangeSprite> janelas;
     public List<GameObject> buracos;
-    // Start is called before the first frame update
+
     void Start()
     {
+
         currentText = ChangeQuestAtHome.objetivos[currentQuest];
         activeScene = SceneManager.GetActiveScene().name;
         Debug.Log("Active scene: " + activeScene);
@@ -93,147 +95,230 @@ public class Player : MonoBehaviour
     private void MouseAction()
     {
 
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        RaycastHit2D hit = Physics2D.Raycast(ray.origin, ray.direction);
-
-        if (hit.collider != null)
+        if (activeScene == "House_Scene")
         {
-            Debug.Log("CLICKED " + hit.collider.name);
 
-            if (hit.collider.name == "Buraco")
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit2D hit = Physics2D.Raycast(ray.origin, ray.direction);
+
+            if (hit.collider != null)
             {
+                Debug.Log("CLICKED " + hit.collider.name);
 
-                Debug.Log("Buraco consertado? " + GameState.buracosConserto);
-
-                if (!GameState.firstLevel)
+                if (hit.collider.name == "Buraco")
                 {
-                    GameState.buracos--;
-                    Destroy(hit.collider.gameObject);
 
-                    if (GameState.buracos == 0)
+                    Debug.Log("Buraco consertado? " + GameState.buracosConserto);
+
+                    if (!GameState.firstLevel)
                     {
-                        Debug.Log("zerou"); advanceQuest();
-                        GameState.buracosConserto = true;
-                        //terminou a quest
+                        GameState.buracos--;
+                        Destroy(hit.collider.gameObject);
 
+                        if (GameState.buracos == 0)
+                        {
+                            Debug.Log("zerou"); advanceQuest();
+                            GameState.buracosConserto = true;
+                            //terminou a quest
+
+                        }
                     }
                 }
-            }
 
-            else if (hit.collider.name == "Janela")
-            {
-                Debug.Log("Janela consertada? " + GameState.janelasConserto);
-                if (!GameState.secondLevel)
+                else if (hit.collider.name == "Janela")
                 {
-                    hit.transform.GetComponent<ChangeSprite>().consertar();
-
-                    GameState.janelas--;
-
-                    if (GameState.janelas == 0)
+                    Debug.Log("Janela consertada? " + GameState.janelasConserto);
+                    if (!GameState.secondLevel)
                     {
-                        Debug.Log("zerou"); advanceQuest();
-                        GameState.janelasConserto = true;
+                        hit.transform.GetComponent<ChangeSprite>().consertar();
+
+                        GameState.janelas--;
+
+                        if (GameState.janelas == 0)
+                        {
+                            Debug.Log("zerou"); advanceQuest();
+                            GameState.janelasConserto = true;
+                        }
                     }
                 }
             }
         }
+        else
+        {
+            if (activeScene == "SecondLevel")
+                attack();
+        }
     }
 
+    [Header("Hit Detection")]
+    public GameObject hitDetectLeft;
+    public GameObject hitDetectRight;
+    public LayerMask enemiesLayer;
+    public float boxCollisionX;
+    public float boxCollisionY;
+    public GameObject enemy;
+
+    private void attack()
+    {
+        Debug.Log("atacou!");
+        //isAttacking = true;
+        animator.SetTrigger(facingRight ? AnimEnum.ATTACK_RIGHT : AnimEnum.ATTACK_LEFT);
+        //animator.SetInteger("transition", facingRight ? AnimEnum.ATTACK_RIGHT : AnimEnum.ATTACK_LEFT);
+        GameObject obj = facingRight ? hitDetectRight : hitDetectLeft;
+
+        Collider2D[] enemiesHit = Physics2D.OverlapBoxAll(obj.transform.position, new Vector2(boxCollisionX, boxCollisionY), enemiesLayer);
+
+        foreach (Collider2D enemy in enemiesHit)
+        {
+            Debug.Log(enemy.name);
+            if (enemy.name != "Player")
+            {
+                this.enemy = enemy.gameObject;
+
+                //Destroy(enemy.gameObject);
+            }
+        }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.DrawWireCube(hitDetectLeft.transform.position, new Vector3(boxCollisionX, boxCollisionY, 0f));
+        Gizmos.DrawWireCube(hitDetectRight.transform.position, new Vector3(boxCollisionX, boxCollisionY, 0f));
+    }
+
+    private void enableHitCollision()
+    {
+
+        if (activeScene == "Second_Level")
+        {
+            GameObject obj = facingRight ? hitDetectRight : hitDetectLeft;
+
+            obj.GetComponent<BoxCollider2D>().gameObject.SetActive(true);
+        }
+    }
+    private void disableHitCollision()
+    {
+        if (activeScene == "Second_Level")
+        {
+            GameObject obj = facingRight ? hitDetectRight : hitDetectLeft;
+
+            obj.GetComponent<BoxCollider2D>().gameObject.SetActive(false);
+        }
+    }
+
+    public bool playerDeath = false;
     public void deathByZombie()
     {
         Debug.Log("Player Death");
-        isPaused = true;
-        Time.timeScale = 0;
+        animator.SetTrigger(AnimEnum.DEATH);
     }
 
+
+
     private float vertical;
-    // Update is called once per frame
+    private void pause()
+    {
+        isPaused = !isPaused;
+        Time.timeScale = isPaused ? 0 : 1;
+        Debug.Log("Game paused");
+    }
+
+    public bool readyToKill;
     void Update()
     {
 
-        if (Input.GetKeyDown(KeyCode.P))
-        {
-            isPaused = !isPaused;
-            Time.timeScale = isPaused ? 0 : 1;
-            Debug.Log("Game paused");
-        }
-
-        if (!isPaused)
+        if (!playerDeath)
         {
 
-            if (moveOnY)
+            if (enemy != null && readyToKill)
             {
-                vertical = Input.GetAxisRaw("Vertical");
-                horizontal = Input.GetAxisRaw("Horizontal");
-            }
-            else
-                horizontal = Input.GetAxisRaw("Horizontal");
-
-            if (Input.GetMouseButtonDown(0))
-            {
-                MouseAction();
+                if(enemy.name =="zombie")
+                Destroy(enemy);
             }
 
-
-            if (Input.GetKeyDown(KeyCode.Space))
+            if (Input.GetKeyDown(KeyCode.P))
             {
-                if (isGrounded())
+                pause();
+            }
+
+            if (!isPaused)
+            {
+
+                if (moveOnY)
                 {
-                    doubleJump = 2;
+                    vertical = Input.GetAxisRaw("Vertical");
+                    horizontal = Input.GetAxisRaw("Horizontal");
+                }
+                else
+                    horizontal = Input.GetAxisRaw("Horizontal");
+
+                if (Input.GetMouseButtonDown(0))
+                {
+                    MouseAction();
                 }
 
-                if (doubleJump > 0 && activeScene != "House_Scene")
+
+                if (Input.GetKeyDown(KeyCode.Space))
                 {
-                    //Debug.Log("Pulou?!");
-                    //rb.velocity = new Vector2(rb.velocity.x, jumpPower);
-                    rb.AddForce(new Vector2(0f, (isGrounded() ? jumpPower : jumpPower / 2)), ForceMode2D.Impulse);
-                    doubleJump -= 1;
+                    if (isGrounded())
+                    {
+                        doubleJump = 2;
+                    }
+
+                    if (doubleJump > 0 && activeScene != "House_Scene")
+                    {
+                        //Debug.Log("Pulou?!");
+                        //rb.velocity = new Vector2(rb.velocity.x, jumpPower);
+                        rb.AddForce(new Vector2(0f, (isGrounded() ? jumpPower : jumpPower / 2)), ForceMode2D.Impulse);
+                        doubleJump -= 1;
+                    }
+
                 }
 
+                // aumentar velocidade da queda
+                if (rb.velocity.y < 0)
+                {
+                    rb.velocity += vecGravity * fallMultiplier * Time.deltaTime;
+                }
+                //(!isAttacking)
+                SetAnimation();
+
             }
-
-            // aumentar velocidade da queda
-            if (rb.velocity.y < 0)
-            {
-                rb.velocity += vecGravity * fallMultiplier * Time.deltaTime;
-            }
-
-            SetAnimation();
-
         }
     }
 
     public Animator animator;
     public void SetAnimation()
     {
+
         if (isGrounded() || activeScene == "House_Scene")
         {
             // Debug.Log("Vertical:" + (moveOnY && vertical != 0)+" Horizontal: "+horizontal);
 
             if (horizontal == 0)
             {
-                animator.SetInteger("transition", facingRight ? 0 : 1);
+                animator.SetInteger("transition", facingRight ? AnimEnum.IDLE_RIGHT : AnimEnum.IDLE_LEFT);
             }
             else if (horizontal == 1)
             {
-                animator.SetInteger("transition", 2);
+                animator.SetInteger("transition", AnimEnum.WALK_RIGHT);
                 facingRight = true;
             }
             else if (horizontal == -1)
             {
                 facingRight = false;
-                animator.SetInteger("transition", 3);
+                animator.SetInteger("transition", AnimEnum.WALK_LEFT);
             }
 
             if (moveOnY && vertical != 0)
             {
-                animator.SetInteger("transition", facingRight ? 2 : 3);
+                animator.SetInteger("transition", facingRight ? AnimEnum.WALK_RIGHT : AnimEnum.WALK_LEFT);
             }
         }
         else
         {
 
-            animator.SetInteger("transition", facingRight ? 4 : 5);
+            animator.SetInteger("transition", facingRight ? AnimEnum.JUMP_RIGHT : AnimEnum.JUMP_LEFT);
         }
 
     }
@@ -243,15 +328,20 @@ public class Player : MonoBehaviour
         return Physics2D.OverlapCapsule(groundCheck.position, new Vector2(0.1f, 0.05f), CapsuleDirection2D.Horizontal, 0, groundLayer);
     }
 
+    public void gameOver()
+    {
+        new ScenesController().LoadScene(this.activeScene);
+    }
+
     private void FixedUpdate()
     {
-        if (moveOnY)
-            rb.MovePosition(rb.position + new Vector2(horizontal, vertical) * speed * Time.fixedDeltaTime);
-        else
-            rb.velocity = new Vector2(horizontal * speed, rb.velocity.y);
-
-
-
+        if (!playerDeath)
+        {
+            if (moveOnY)
+                rb.MovePosition(rb.position + new Vector2(horizontal, vertical) * speed * Time.fixedDeltaTime);
+            else
+                rb.velocity = new Vector2(horizontal * speed, rb.velocity.y);
+        }
     }
 
     public void addMadeira()

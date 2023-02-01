@@ -38,7 +38,6 @@ public class AIChase : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        Debug.Log("Does it enter?");
         if (collision.CompareTag("Player")) {
             collision.gameObject.GetComponent<Player>().deathByZombie();
         }
